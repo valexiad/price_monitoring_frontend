@@ -8,8 +8,10 @@ const AuthContext = createContext();
 export default AuthContext;
 
 export const AuthProvider = ({ children }) => {
-  let apiClient = new ApiClient()
-  apiClient.basePath = '"http://127.0.0.1:8000/';
+  const PRICE_MONITORING_URL = process.env.REACT_APP_PRICE_MONITORING_URL;
+  
+  let apiClient = new ApiClient();
+  apiClient.basePath = PRICE_MONITORING_URL;
   let apiInstance = new AuthApi(apiClient);
 
   const [authTokens, setAuthTokens] = useState(() =>
@@ -18,8 +20,8 @@ export const AuthProvider = ({ children }) => {
       : null
   );
   const [user, setUser] = useState(() =>
-    localStorage.getItem("authTokens")
-      ? jwt_decode(localStorage.getItem("authTokens"))
+    localStorage.getItem("userInfo")
+      ? JSON.parse(localStorage.getItem("userInfo"))
       : null
   );
   const [loading, setLoading] = useState(true);
@@ -27,15 +29,25 @@ export const AuthProvider = ({ children }) => {
   const history = useHistory();
 
   const loginUser = async (username, password) => {
-    let body = new Login(username, password);
+    let body = new Login();
+    body.email = username;
+    body.password = password;
 
     apiInstance.authLoginCreate(body, (error, data, response) => {
       if (error) {
         console.error(error);
       } else {
-        setAuthTokens(data);
-        setUser(jwt_decode(data.access));
-        localStorage.setItem("authTokens", JSON.stringify(data));
+        let authTokens = {
+          'access': data.access,
+          'refresh': data.refresh,
+        };
+        setAuthTokens(authTokens);
+
+        let user = data.user;
+        setUser(user);
+
+        localStorage.setItem("authTokens", JSON.stringify(authTokens));
+        localStorage.setItem("userInfo", JSON.stringify(user));
         history.push("/");
       }
     });
